@@ -1,0 +1,2081 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cyber Rush: Overdrive HD</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: #03050a;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            height: 100%;
+            max-height: 920px;
+            background: #060913;
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Notifica Interna (Sostituisce qualsiasi alert di sistema) */
+        #customToast {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(15, 23, 42, 0.96);
+            border: 1px solid #38bdf8;
+            color: #f8fafc;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            z-index: 100;
+            white-space: nowrap;
+        }
+        #customToast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* HUD In-Game */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 14px;
+            z-index: 5;
+        }
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+        }
+        .hud-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .score-box {
+            background: rgba(10, 15, 29, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-left: 4px solid #38bdf8;
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        .combo-badge {
+            background: linear-gradient(135deg, #f43f5e, #e11d48);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 900;
+            padding: 2px 7px;
+            border-radius: 6px;
+            display: none;
+        }
+        .sector-badge {
+            font-size: 10px;
+            font-weight: 800;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            display: block;
+        }
+        .gem-counter {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(10, 15, 29, 0.9);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 800;
+            color: #fbbf24;
+            width: fit-content;
+        }
+        .hud-controls {
+            display: flex;
+            gap: 8px;
+            pointer-events: auto;
+        }
+        .icon-btn {
+            background: rgba(10, 15, 29, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 17px;
+        }
+        .icon-btn:active { transform: scale(0.92); }
+
+        /* Barra Vita Boss */
+        #bossHud {
+            position: absolute;
+            top: 78px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 84%;
+            background: rgba(15, 23, 42, 0.94);
+            border: 1px solid rgba(244, 63, 94, 0.6);
+            border-radius: 10px;
+            padding: 6px 12px;
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            box-shadow: 0 6px 20px rgba(244, 63, 94, 0.25);
+        }
+        .boss-title {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 900;
+            color: #fda4af;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .boss-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: #1e293b;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        #bossBarFill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #f43f5e, #fb923c);
+            transition: width 0.08s linear;
+        }
+
+        /* Power-up Bars */
+        .powerup-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            width: 135px;
+            margin-top: 4px;
+        }
+        .p-bar-wrap {
+            background: rgba(10, 15, 29, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            padding: 3px 6px;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            font-weight: 800;
+        }
+        .p-bar-fill {
+            height: 5px;
+            border-radius: 3px;
+            flex: 1;
+        }
+
+        /* Pulsante Super EMP */
+        .hud-bottom {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            width: 100%;
+            padding-bottom: 8px;
+        }
+        #empBtn {
+            pointer-events: auto;
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.92);
+            border: 3px solid #334155;
+            color: #94a3b8;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 10px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: transform 0.1s, border-color 0.2s, box-shadow 0.2s;
+        }
+        #empBtn.ready {
+            border-color: #38bdf8;
+            color: #ffffff;
+            background: radial-gradient(circle, #0284c7 0%, #0f172a 100%);
+            box-shadow: 0 0 22px rgba(56, 189, 248, 0.65);
+            animation: pulseEmp 1.2s infinite;
+        }
+        @keyframes pulseEmp {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.07); }
+        }
+
+        /* Banner Centrale */
+        #centerBanner {
+            position: absolute;
+            top: 26%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.85);
+            background: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.96), transparent);
+            border-top: 2px solid #38bdf8;
+            border-bottom: 2px solid #38bdf8;
+            width: 100%;
+            text-align: center;
+            padding: 12px 0;
+            font-size: 19px;
+            font-weight: 900;
+            letter-spacing: 2.5px;
+            color: #fff;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            z-index: 6;
+        }
+        #centerBanner.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        /* Schermate Menu */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 8, 17, 0.94);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 18px;
+            text-align: center;
+            pointer-events: auto;
+            transition: opacity 0.25s ease;
+            z-index: 10;
+            overflow-y: auto;
+        }
+        .screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .game-title {
+            font-size: 34px;
+            font-weight: 900;
+            line-height: 1;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+            background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #f43f5e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .game-subtitle {
+            font-size: 11px;
+            font-weight: 800;
+            color: #64748b;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+        .menu-stats {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 340px;
+            margin-bottom: 14px;
+        }
+        .stat-card {
+            flex: 1;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 10px 8px;
+        }
+        .stat-card small {
+            display: block;
+            font-size: 10px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 3px;
+        }
+        .stat-card strong {
+            font-size: 20px;
+            color: #f8fafc;
+        }
+
+        /* Pannello Missioni */
+        .missions-box {
+            width: 100%;
+            max-width: 340px;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 14px;
+            padding: 12px;
+            margin-bottom: 14px;
+            text-align: left;
+        }
+        .missions-header {
+            font-size: 11px;
+            font-weight: 900;
+            color: #38bdf8;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .mission-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1e293b;
+            padding: 7px 10px;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .mission-row:last-child { margin-bottom: 0; }
+        .mission-reward {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .btn {
+            width: 100%;
+            max-width: 300px;
+            background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 13px 20px;
+            font-size: 15px;
+            font-weight: 800;
+            border-radius: 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 8px;
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+            transition: transform 0.1s;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-shop {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            box-shadow: 0 6px 18px rgba(217, 119, 6, 0.3);
+        }
+        .btn-secondary {
+            background: #1e293b;
+            box-shadow: none;
+            color: #cbd5e1;
+        }
+
+        /* Hangar & Potenziamenti */
+        .shop-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            width: 100%;
+            max-width: 360px;
+            margin-bottom: 12px;
+        }
+        .ship-card {
+            background: #0f172a;
+            border: 2px solid #1e293b;
+            border-radius: 12px;
+            padding: 8px 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+        }
+        .ship-card.full-width {
+            grid-column: span 2;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+        }
+        .ship-card.selected {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.1);
+        }
+        .ship-card img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            margin-bottom: 2px;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+        }
+        .ship-name {
+            font-size: 12px;
+            font-weight: 800;
+            color: #f1f5f9;
+        }
+        .ship-perk {
+            font-size: 9px;
+            font-weight: 700;
+            color: #38bdf8;
+            margin-bottom: 5px;
+        }
+        .ship-status {
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 9px;
+            border-radius: 8px;
+            text-transform: uppercase;
+        }
+        .status-equipped { background: #0284c7; color: #fff; }
+        .status-owned { background: #334155; color: #cbd5e1; }
+        .status-locked { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.4); }
+
+        .upgrades-list {
+            width: 100%;
+            max-width: 360px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .upgrade-item {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 10px;
+            padding: 7px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: left;
+        }
+        .upg-info strong { font-size: 12px; display: block; color: #f8fafc; }
+        .upg-info small { font-size: 10px; color: #94a3b8; }
+        .upg-btn {
+            background: #0284c7;
+            color: #fff;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            min-width: 72px;
+        }
+        .upg-btn:disabled {
+            background: #334155;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="centerBanner">SETTORE 1</div>
+    <div id="customToast">Notifica</div>
+
+    <!-- HUD In-Game -->
+    <div class="ui-layer" id="hudLayer" style="display: none;">
+        <div class="hud-top">
+            <div class="hud-stats">
+                <div class="score-box" id="scoreBoxBorder">
+                    <div>
+                        <span class="sector-badge" id="sectorText">SETTORE 1</span>
+                        <span id="currentScore">0</span><small style="font-size: 12px; color:#64748b;">m</small>
+                    </div>
+                    <span class="combo-badge" id="comboBadge">x2</span>
+                </div>
+                <div class="gem-counter">
+                    <span>💎</span> <span id="hudGems">0</span>
+                </div>
+                <div class="powerup-bars">
+                    <div class="p-bar-wrap" id="shieldIndicator" style="color:#38bdf8;">
+                        <span>🛡️ SCUDO ATTIVO</span>
+                    </div>
+                    <div class="p-bar-wrap" id="magnetBarWrap" style="color:#c084fc;">
+                        <span>🧲</span>
+                        <div class="p-bar-fill" id="magnetBar" style="background:#c084fc;"></div>
+                    </div>
+                    <div class="p-bar-wrap" id="boostBarWrap" style="color:#fb923c;">
+                        <span>⚡</span>
+                        <div class="p-bar-fill" id="boostBar" style="background:#fb923c;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="hud-controls">
+                <button class="icon-btn" id="audioBtn">🔊</button>
+                <button class="icon-btn" id="pauseBtn">⏸️</button>
+            </div>
+        </div>
+
+        <!-- Barra Salute Boss -->
+        <div id="bossHud">
+            <div class="boss-title">
+                <span id="bossName">⚠️ CORAZZATA AEGIS-IX</span>
+                <span id="bossHpText">100%</span>
+            </div>
+            <div class="boss-bar-bg">
+                <div id="bossBarFill"></div>
+            </div>
+        </div>
+
+        <!-- Pulsante Super EMP -->
+        <div class="hud-bottom">
+            <button id="empBtn">
+                <span style="font-size:18px;">🌩️</span>
+                <span id="empText">0%</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Menu Principale -->
+    <div id="startScreen" class="screen">
+        <div class="game-title">Cyber Rush</div>
+        <div class="game-subtitle">Overdrive HD</div>
+
+        <div class="menu-stats">
+            <div class="stat-card">
+                <small>Record Distanza</small>
+                <strong id="menuBestScore">0m</strong>
+            </div>
+            <div class="stat-card">
+                <small>Gemme Totali</small>
+                <strong id="menuTotalGems" style="color: #fbbf24;">💎 0</strong>
+            </div>
+        </div>
+
+        <div class="missions-box">
+            <div class="missions-header">
+                <span>🎯 Contratti Operativi</span>
+                <span>Premi Automatici</span>
+            </div>
+            <div id="missionsContainer"></div>
+        </div>
+
+        <button class="btn" id="startBtn">Inizia Missione</button>
+        <button class="btn btn-shop" id="openShopBtn">Hangar & Officina</button>
+    </div>
+
+    <!-- Hangar & Officina Potenziamenti -->
+    <div id="shopScreen" class="screen hidden">
+        <div class="game-title" style="font-size: 24px;">Hangar & Tech</div>
+        <div class="gem-counter" style="margin: 6px 0 10px 0; font-size: 14px;">
+            <span>💎 Disponibili:</span> <span id="shopGems">0</span>
+        </div>
+
+        <div class="shop-grid" id="shopGrid"></div>
+
+        <div class="upgrades-list" id="upgradesList"></div>
+
+        <button class="btn btn-secondary" id="closeShopBtn">Torna al Menu</button>
+    </div>
+
+    <!-- Schermata Pausa -->
+    <div id="pauseScreen" class="screen hidden">
+        <div class="game-title" style="font-size: 30px; margin-bottom: 20px;">In Pausa</div>
+        <button class="btn" id="resumeBtn">Riprendi Corsa</button>
+        <button class="btn btn-secondary" id="quitBtn">Menu Principale</button>
+    </div>
+
+    <!-- Schermata Game Over -->
+    <div id="gameOverScreen" class="screen hidden">
+        <div class="game-title" style="font-size: 32px;">Navicella Abbattuta</div>
+        <div class="game-subtitle" id="newRecordBadge" style="color:#fbbf24; margin-bottom:14px;">Fine Corsa</div>
+
+        <div class="menu-stats">
+            <div class="stat-card">
+                <small>Distanza Finale</small>
+                <strong id="finalScore">0m</strong>
+            </div>
+            <div class="stat-card">
+                <small>Gemme Raccolte</small>
+                <strong id="runGems" style="color: #fbbf24;">+0 💎</strong>
+            </div>
+        </div>
+
+        <button class="btn" id="restartBtn">Riprova Subito</button>
+        <button class="btn btn-shop" id="gameOverShopBtn">Hangar & Officina</button>
+        <button class="btn btn-secondary" id="shareBtn">Copia Record</button>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let logicalWidth = 360;
+    let logicalHeight = 740;
+
+    function resize() {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        logicalWidth = rect.width;
+        logicalHeight = rect.height;
+        canvas.width = logicalWidth * dpr;
+        canvas.height = logicalHeight * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Funzione Toast Interna (Zero finestre popup di sistema!)
+    let toastTimeout = null;
+    function showToast(msg) {
+        const t = document.getElementById('customToast');
+        t.innerText = msg;
+        t.classList.add('show');
+        if (toastTimeout) clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    // ============================================================================
+    // MOTORE SPRITE HD INCORPORATO (5 Caccia + Nemici + Boss)
+    // ============================================================================
+    function createSprite(svgString) {
+        const img = new Image();
+        img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svgString.trim());
+        return img;
+    }
+
+    const SPRITES = {
+        ships: [
+            // 0: Valkyrie X1 (Standard)
+            createSprite(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 110">
+                <defs>
+                    <linearGradient id="hull0" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#1e3a8a"/><stop offset="50%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#0f172a"/>
+                    </linearGradient>
+                    <linearGradient id="wing0" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#64748b"/><stop offset="100%" stop-color="#1e293b"/>
+                    </linearGradient>
+                </defs>
+                <rect x="20" y="18" width="5" height="28" rx="2" fill="#94a3b8"/>
+                <rect x="75" y="18" width="5" height="28" rx="2" fill="#94a3b8"/>
+                <polygon points="50,24 96,74 88,90 62,78 38,78 12,90 4,74" fill="url(#wing0)" stroke="#475569" stroke-width="1.5"/>
+                <polygon points="50,34 88,72 82,80 50,66 18,80 12,72" fill="#0284c7" opacity="0.7"/>
+                <polygon points="28,60 20,96 34,88" fill="#0f172a" stroke="#38bdf8" stroke-width="1"/>
+                <polygon points="72,60 80,96 66,88" fill="#0f172a" stroke="#38bdf8" stroke-width="1"/>
+                <polygon points="50,4 66,58 58,90 42,90 34,58" fill="url(#hull0)" stroke="#bae6fd" stroke-width="1.2"/>
+                <polygon points="50,24 58,48 50,62 42,48" fill="#e0f2fe" stroke="#0284c7" stroke-width="1"/>
+            </svg>`),
+
+            // 1: Crimson Viper (3.500 Gemme)
+            createSprite(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 110">
+                <defs>
+                    <linearGradient id="hull1" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#881337"/><stop offset="50%" stop-color="#f43f5e"/><stop offset="100%" stop-color="#4c0519"/>
+                    </linearGradient>
+                </defs>
+                <rect x="14" y="24" width="4" height="30" fill="#cbd5e1"/>
+                <rect x="82" y="24" width="4" height="30" fill="#cbd5e1"/>
+                <polygon points="50,36 86,20 96,64 76,92 60,76 40,76 24,92 4,64 14,20" fill="#1e293b" stroke="#f43f5e" stroke-width="1.8"/>
+                <polygon points="16,30 32,68 12,62" fill="#be123c"/>
+                <polygon points="84,30 68,68 88,62" fill="#be123c"/>
+                <polygon points="50,4 68,52 58,88 42,88 32,52" fill="url(#hull1)" stroke="#fecdd3" stroke-width="1.2"/>
+                <polygon points="50,26 59,50 50,64 41,50" fill="#fbbf24" stroke="#fef3c7" stroke-width="1"/>
+            </svg>`),
+
+            // 2: Solaris Prime (12.000 Gemme)
+            createSprite(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 110">
+                <defs>
+                    <linearGradient id="hull2" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#78350f"/><stop offset="50%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#92400e"/>
+                    </linearGradient>
+                </defs>
+                <polygon points="50,8 96,80 78,92 50,80 22,92 4,80" fill="#1e293b" stroke="#fbbf24" stroke-width="2"/>
+                <polygon points="50,20 86,76 72,82 50,70 28,82 14,76" fill="url(#hull2)"/>
+                <polyline points="24,72 38,56 38,74" fill="none" stroke="#38bdf8" stroke-width="2.5"/>
+                <polyline points="76,72 62,56 62,74" fill="none" stroke="#38bdf8" stroke-width="2.5"/>
+                <polygon points="50,2 64,60 50,94 36,60" fill="url(#hull2)" stroke="#fef3c7" stroke-width="1.5"/>
+                <polygon points="50,26 58,48 50,62 42,48" fill="#38bdf8" stroke="#e0f2fe" stroke-width="1.2"/>
+                <circle cx="50" cy="74" r="6" fill="#ffffff" stroke="#38bdf8" stroke-width="2"/>
+            </svg>`),
+
+            // 3: Omega Wraith (35.000 Gemme)
+            createSprite(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 110">
+                <defs>
+                    <linearGradient id="hull3" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#022c22"/><stop offset="50%" stop-color="#10b981"/><stop offset="100%" stop-color="#064e3b"/>
+                    </linearGradient>
+                </defs>
+                <path d="M 50 16 L 96 56 L 84 94 L 62 72 L 38 72 L 16 94 L 4 56 Z" fill="#090d16" stroke="#10b981" stroke-width="2"/>
+                <polygon points="50,26 84,58 76,78 56,64 44,64 24,78 16,58" fill="#065f46" opacity="0.8"/>
+                <polygon points="50,2 64,48 56,92 44,92 36,48" fill="url(#hull3)" stroke="#6ee7b7" stroke-width="1.2"/>
+                <polygon points="50,20 56,42 50,56 44,42" fill="#a7f3d0"/>
+                <circle cx="50" cy="68" r="5" fill="#34d399"/>
+            </svg>`),
+
+            // 4: Celestial Apex (85.000 Gemme - Leggendaria!)
+            createSprite(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 110">
+                <defs>
+                    <linearGradient id="hull4" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#ffffff"/><stop offset="50%" stop-color="#c084fc"/><stop offset="100%" stop-color="#3b0764"/>
+                    </linearGradient>
+                </defs>
+                <!-- 4 Cannoni Laser Divini -->
+                <rect x="8" y="28" width="4" height="32" fill="#fde047"/>
+                <rect x="24" y="14" width="4" height="32" fill="#fde047"/>
+                <rect x="72" y="14" width="4" height="32" fill="#fde047"/>
+                <rect x="88" y="28" width="4" height="32" fill="#fde047"/>
+                <!-- Ali Angeliche Cyber -->
+                <polygon points="50,18 98,48 90,94 64,74 36,74 10,94 2,48" fill="#1e1b4b" stroke="#fbbf24" stroke-width="2.2"/>
+                <polygon points="50,26 86,52 78,80 50,66 22,80 14,52" fill="#7e22ce"/>
+                <!-- Scocca Reale -->
+                <polygon points="50,2 66,48 56,94 44,94 34,48" fill="url(#hull4)" stroke="#fef08a" stroke-width="1.5"/>
+                <!-- Nucleo Prismatico -->
+                <polygon points="50,20 58,44 50,60 42,44" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5"/>
+                <circle cx="50" cy="72" r="7" fill="#fde047" stroke="#ffffff" stroke-width="2"/>
+            </svg>`)
+        ],
+
+        enemyDrone: createSprite(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 90">
+            <polygon points="28,12 33,2 38,12" fill="#fb923c"/>
+            <polygon points="52,12 57,2 62,12" fill="#fb923c"/>
+            <rect x="26" y="64" width="4" height="18" fill="#f43f5e"/>
+            <rect x="60" y="64" width="4" height="18" fill="#f43f5e"/>
+            <polygon points="45,76 86,30 76,12 54,26 36,26 14,12 4,30" fill="#1e293b" stroke="#fb923c" stroke-width="2"/>
+            <polygon points="14,26 32,48 10,40" fill="#f43f5e"/>
+            <polygon points="76,26 58,48 80,40" fill="#f43f5e"/>
+            <polygon points="45,84 60,42 52,14 38,14 30,42" fill="#334155" stroke="#94a3b8" stroke-width="1.5"/>
+            <circle cx="45" cy="50" r="10" fill="#881337" stroke="#fda4af" stroke-width="1.5"/>
+            <circle cx="45" cy="52" r="5" fill="#ff0055"/>
+        </svg>`),
+
+        enemyHeavy: createSprite(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+            <polygon points="18,14 78,14 90,48 72,84 24,84 6,48" fill="#1e293b" stroke="#f59e0b" stroke-width="2.5"/>
+            <rect x="22" y="76" width="8" height="16" rx="2" fill="#94a3b8"/>
+            <rect x="66" y="76" width="8" height="16" rx="2" fill="#94a3b8"/>
+            <polygon points="28,22 68,22 76,52 62,76 34,76 20,52" fill="#334155" stroke="#cbd5e1" stroke-width="1.5"/>
+            <circle cx="48" cy="48" r="14" fill="#7c2d12" stroke="#fb923c" stroke-width="2.5"/>
+            <circle cx="48" cy="48" r="7" fill="#fde047"/>
+        </svg>`),
+
+        pylon: createSprite(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 48">
+            <rect x="2" y="4" width="28" height="40" rx="6" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+            <rect x="6" y="10" width="20" height="28" rx="3" fill="#334155"/>
+            <circle cx="16" cy="24" r="7" fill="#f43f5e" stroke="#ffffff" stroke-width="1.5"/>
+        </svg>`),
+
+        boss: createSprite(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 140">
+            <rect x="28" y="90" width="10" height="32" rx="3" fill="#64748b" stroke="#f43f5e" stroke-width="1.5"/>
+            <rect x="58" y="98" width="10" height="34" rx="3" fill="#64748b" stroke="#f43f5e" stroke-width="1.5"/>
+            <rect x="152" y="98" width="10" height="34" rx="3" fill="#64748b" stroke="#f43f5e" stroke-width="1.5"/>
+            <rect x="182" y="90" width="10" height="32" rx="3" fill="#64748b" stroke="#f43f5e" stroke-width="1.5"/>
+            <polygon points="110,10 214,44 196,108 140,102 110,126 80,102 24,108 6,44" fill="#1e293b" stroke="#f43f5e" stroke-width="3"/>
+            <polygon points="22,54 78,42 70,90 32,94" fill="#881337" stroke="#fda4af" stroke-width="1"/>
+            <polygon points="198,54 142,42 150,90 188,94" fill="#881337" stroke="#fda4af" stroke-width="1"/>
+            <polygon points="110,18 144,48 132,110 88,110 76,48" fill="#0f172a" stroke="#cbd5e1" stroke-width="2"/>
+            <circle cx="54" cy="68" r="10" fill="#fb923c" stroke="#fff" stroke-width="2"/>
+            <circle cx="166" cy="68" r="10" fill="#fb923c" stroke="#fff" stroke-width="2"/>
+            <circle cx="110" cy="72" r="20" fill="#4c0519" stroke="#f43f5e" stroke-width="3"/>
+            <circle cx="110" cy="72" r="11" fill="#ff0055"/>
+        </svg>`),
+
+        gem: createSprite(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+            <polygon points="20,2 36,14 28,36 12,36 4,14" fill="#f59e0b" stroke="#fef3c7" stroke-width="2"/>
+            <polygon points="20,6 30,15 24,32 16,32 10,15" fill="#fbbf24"/>
+            <polygon points="20,8 26,15 20,24 14,15" fill="#ffffff" opacity="0.8"/>
+        </svg>`)
+    };
+
+    // --- SALVATAGGIO E COSTI ALTISSIMI PER LONGEVITÀ ---
+    let saveData = {
+        highScore: parseInt(localStorage.getItem('cr_pro_best')) || 0,
+        gems: parseInt(localStorage.getItem('cr_pro_gems')) || 0,
+        unlockedShips: JSON.parse(localStorage.getItem('cr_pro_ships')) || [0],
+        selectedShip: parseInt(localStorage.getItem('cr_pro_sel')) || 0,
+        upgrades: JSON.parse(localStorage.getItem('cr_pro_upg')) || { blaster: 1, magnet: 1, boost: 1 },
+        missions: JSON.parse(localStorage.getItem('cr_pro_missions')) || [
+            { id: 0, desc: 'Abbatti 12 Caccia Nemici', progress: 0, target: 12, reward: 60, type: 'drones' },
+            { id: 1, desc: 'Raccogli 50 Gemme', progress: 0, target: 50, reward: 50, type: 'gems' },
+            { id: 2, desc: 'Distruggi 1 Corazzata Boss', progress: 0, target: 1, reward: 120, type: 'boss' }
+        ]
+    };
+
+    function saveProgress() {
+        try {
+            localStorage.setItem('cr_pro_best', saveData.highScore);
+            localStorage.setItem('cr_pro_gems', saveData.gems);
+            localStorage.setItem('cr_pro_ships', JSON.stringify(saveData.unlockedShips));
+            localStorage.setItem('cr_pro_sel', saveData.selectedShip);
+            localStorage.setItem('cr_pro_upg', JSON.stringify(saveData.upgrades));
+            localStorage.setItem('cr_pro_missions', JSON.stringify(saveData.missions));
+        } catch (e) {}
+        updateMenuUI();
+    }
+
+    // Navicelle con Prezzi Altissimi e Abilità Uniche
+    const SHIPS = [
+        { id: 0, name: 'Valkyrie X1', price: 0, perk: 'Doppio Cannone Base', engine: '#00f3ff' },
+        { id: 1, name: 'Crimson Viper', price: 3500, perk: 'Fuoco Rapido +25%', engine: '#fb7185' },
+        { id: 2, name: 'Solaris Prime', price: 12000, perk: 'Laser Danno Doppio (x2)', engine: '#fbbf24' },
+        { id: 3, name: 'Omega Wraith', price: 35000, perk: 'Triplo Plasma a Ventaglio', engine: '#34d399' },
+        { id: 4, name: 'Celestial Apex', price: 85000, perk: '4x Laser + Scudo Iniziale', engine: '#c084fc', fullWidth: true }
+    ];
+
+    const BIOMES = [
+        { name: 'CYBER GRID', color: '#38bdf8', bg: '#050811', track: '#0a1020', nebula: 'rgba(56, 189, 248, 0.08)' },
+        { name: 'CRIMSON SECTOR', color: '#f43f5e', bg: '#11050b', track: '#1b0914', nebula: 'rgba(244, 63, 94, 0.08)' },
+        { name: 'XENO REACTOR', color: '#10b981', bg: '#04100c', track: '#081a14', nebula: 'rgba(16, 185, 129, 0.08)' },
+        { name: 'SOLAR CORE', color: '#fbbf24', bg: '#110c04', track: '#1d1508', nebula: 'rgba(251, 191, 36, 0.08)' }
+    ];
+
+    // --- AUDIO SINTETIZZATO ---
+    let audioCtx = null;
+    let isMuted = false;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    document.getElementById('audioBtn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        isMuted = !isMuted;
+        document.getElementById('audioBtn').innerText = isMuted ? '🔇' : '🔊';
+    });
+
+    function playSound(type) {
+        if (isMuted || !audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === 'move') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.exponentialRampToValueAtTime(330, now + 0.05);
+            gain.gain.setValueAtTime(0.06, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+            osc.start(now); osc.stop(now + 0.05);
+        } else if (type === 'shoot') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(560, now);
+            osc.frequency.exponentialRampToValueAtTime(190, now + 0.04);
+            gain.gain.setValueAtTime(0.02, now);
+            gain.gain.exponentialRampToValueAtTime(0.005, now + 0.04);
+            osc.start(now); osc.stop(now + 0.04);
+        } else if (type === 'gem') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(840, now);
+            osc.frequency.setValueAtTime(1260, now + 0.05);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
+            osc.start(now); osc.stop(now + 0.14);
+        } else if (type === 'powerup') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(360, now);
+            osc.frequency.exponentialRampToValueAtTime(900, now + 0.22);
+            gain.gain.setValueAtTime(0.14, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+            osc.start(now); osc.stop(now + 0.25);
+        } else if (type === 'emp') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(620, now);
+            osc.frequency.exponentialRampToValueAtTime(55, now + 0.5);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+            osc.start(now); osc.stop(now + 0.5);
+        } else if (type === 'break') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(240, now);
+            osc.frequency.linearRampToValueAtTime(65, now + 0.2);
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        } else if (type === 'crash') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(130, now);
+            osc.frequency.linearRampToValueAtTime(28, now + 0.45);
+            gain.gain.setValueAtTime(0.28, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+            osc.start(now); osc.stop(now + 0.45);
+        }
+    }
+
+    // --- VARIABILI DI GIOCO ---
+    let gameState = 'MENU';
+    let gameOverTimestamp = 0; // Previene tocchi involontari sul Game Over
+    let distance = 0;
+    let nextBossDist = 450;
+    let runGemsCount = 0;
+    let currentSector = 1;
+    let baseSpeed = 6.5;
+    let currentSpeed = 6.5;
+    let frameCount = 0;
+    let roadOffset = 0;
+    let shakeTimer = 0;
+
+    let combo = 1;
+    let comboTimer = 0;
+    let empCharge = 0;
+    let empWaveRadius = 0;
+
+    let currentLane = 1;
+    let player = {
+        x: 0, y: 0,
+        tilt: 0,
+        shield: false,
+        magnetTimer: 0,
+        boostTimer: 0
+    };
+
+    let boss = null;
+    let bullets = [];
+    let obstacles = [];
+    let items = [];
+    let particles = [];
+    let floatingTexts = [];
+    let stars = [];
+    let nebulas = [];
+
+    for (let i = 0; i < 50; i++) {
+        stars.push({
+            x: Math.random() * 480,
+            y: Math.random() * 900,
+            size: Math.random() * 2 + 0.6,
+            speed: Math.random() * 1.8 + 0.4
+        });
+    }
+    for (let i = 0; i < 4; i++) {
+        nebulas.push({
+            x: Math.random() * 360,
+            y: i * 240,
+            radius: 110 + Math.random() * 60
+        });
+    }
+
+    function getLanes() {
+        const roadMargin = 32;
+        const roadWidth = logicalWidth - roadMargin * 2;
+        const laneW = roadWidth / 3;
+        return [
+            roadMargin + laneW * 0.5,
+            roadMargin + laneW * 1.5,
+            roadMargin + laneW * 2.5
+        ];
+    }
+
+    function advanceMission(type, amount = 1) {
+        saveData.missions.forEach(m => {
+            if (m.type === type) {
+                m.progress += amount;
+                if (m.progress >= m.target) {
+                    m.progress = 0;
+                    m.target = Math.floor(m.target * 1.35);
+                    saveData.gems += m.reward;
+                    runGemsCount += m.reward;
+                    document.getElementById('hudGems').innerText = runGemsCount;
+                    addFloatingText(`🎯 CONTRATTO +${m.reward}💎`, logicalWidth / 2, player.y - 55, '#fbbf24');
+                    playSound('powerup');
+                }
+            }
+        });
+    }
+
+    // --- INPUT TOUCH ---
+    canvas.addEventListener('pointerdown', (e) => {
+        initAudio();
+        if (gameState !== 'PLAYING') return;
+
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.clientX - rect.left;
+
+        if (clientX < logicalWidth / 2) {
+            if (currentLane > 0) {
+                currentLane--;
+                player.tilt = -0.36;
+                playSound('move');
+            }
+        } else {
+            if (currentLane < 2) {
+                currentLane++;
+                player.tilt = 0.36;
+                playSound('move');
+            }
+        }
+    });
+
+    document.getElementById('empBtn').addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        if (gameState === 'PLAYING' && empCharge >= 100) {
+            empCharge = 0;
+            empWaveRadius = 10;
+            updateEmpUI();
+            playSound('emp');
+            shakeTimer = 15;
+            if (navigator.vibrate) navigator.vibrate(120);
+
+            const lanes = getLanes();
+            obstacles.forEach(obs => {
+                createExplosion(lanes[obs.lane], obs.y, '#38bdf8', 16);
+            });
+            obstacles = [];
+
+            if (boss) {
+                boss.hp -= boss.maxHp * 0.35;
+                boss.hitFlash = 8;
+                createExplosion(boss.x, boss.y, '#38bdf8', 30);
+                addFloatingText("EMP BLAST!", boss.x, boss.y + 45, '#38bdf8');
+            }
+        }
+    });
+
+    function updateEmpUI() {
+        const btn = document.getElementById('empBtn');
+        const txt = document.getElementById('empText');
+        txt.innerText = Math.floor(empCharge) + '%';
+        if (empCharge >= 100) {
+            btn.classList.add('ready');
+            txt.innerText = 'PRONTO';
+        } else {
+            btn.classList.remove('ready');
+        }
+    }
+
+    function spawnWave() {
+        if (boss) return;
+
+        const lanes = [0, 1, 2];
+        lanes.sort(() => Math.random() - 0.5);
+
+        const numObstacles = (currentSector >= 2 && Math.random() < 0.45) ? 2 : 1;
+
+        for (let i = 0; i < numObstacles; i++) {
+            const obsLane = lanes[i];
+            const randType = Math.random();
+            let type = 'barrier';
+            let hp = 999;
+
+            if (randType < 0.42) {
+                type = 'drone';
+                hp = 2 + Math.floor(currentSector * 0.6);
+            } else if (randType < 0.62) {
+                type = 'heavy';
+                hp = 4 + Math.floor(currentSector * 1.1);
+            }
+
+            obstacles.push({
+                lane: obsLane,
+                y: -75,
+                type: type,
+                hp: hp,
+                maxHp: hp,
+                width: 68,
+                height: type === 'barrier' ? 28 : 54,
+                hitFlash: 0,
+                nearMissed: false
+            });
+        }
+
+        const freeLane = lanes[2];
+        const rand = Math.random();
+
+        if (rand < 0.13) {
+            const pTypes = ['shield', 'magnet', 'boost'];
+            items.push({
+                lane: freeLane,
+                y: -75,
+                type: pTypes[Math.floor(Math.random() * pTypes.length)]
+            });
+        } else if (rand < 0.78) {
+            for (let g = 0; g < 3; g++) {
+                items.push({
+                    lane: freeLane,
+                    y: -75 - (g * 42),
+                    type: 'gem'
+                });
+            }
+        }
+    }
+
+    function spawnBoss() {
+        const lanes = getLanes();
+        const maxHp = 35 + (currentSector * 18);
+        boss = {
+            lane: 1,
+            x: lanes[1],
+            y: -130,
+            targetY: 135,
+            hp: maxHp,
+            maxHp: maxHp,
+            state: 'ENTERING',
+            timer: 0,
+            laserLane: 1,
+            hitFlash: 0
+        };
+        document.getElementById('bossHud').style.display = 'flex';
+        showBanner(`⚠️ CORAZZATA AEGIS-IX IN ARRIVO ⚠️`, '#f43f5e');
+        playSound('powerup');
+    }
+
+    function createExplosion(x, y, color, count) {
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 5.5 + 1.5;
+            particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: Math.random() * 4.5 + 2,
+                color,
+                alpha: 1
+            });
+        }
+    }
+
+    function addFloatingText(text, x, y, color) {
+        floatingTexts.push({ text, x, y, color, alpha: 1 });
+    }
+
+    function showBanner(text, borderColor = '#38bdf8') {
+        const banner = document.getElementById('centerBanner');
+        banner.innerText = text;
+        banner.style.borderColor = borderColor;
+        banner.classList.add('show');
+        setTimeout(() => banner.classList.remove('show'), 2200);
+    }
+
+    // --- UPDATE LOOP ---
+    function update() {
+        if (gameState !== 'PLAYING') return;
+
+        frameCount++;
+        const lanes = getLanes();
+
+        if (comboTimer > 0) {
+            comboTimer--;
+            if (comboTimer === 0) {
+                combo = 1;
+                document.getElementById('comboBadge').style.display = 'none';
+            }
+        }
+
+        const magnetMax = 340 + (saveData.upgrades.magnet * 45);
+        if (player.magnetTimer > 0) {
+            player.magnetTimer--;
+            document.getElementById('magnetBarWrap').style.display = 'flex';
+            document.getElementById('magnetBar').style.width = (player.magnetTimer / magnetMax * 100) + '%';
+        } else {
+            document.getElementById('magnetBarWrap').style.display = 'none';
+        }
+
+        const boostMax = 220 + (saveData.upgrades.boost * 35);
+        if (player.boostTimer > 0) {
+            player.boostTimer--;
+            document.getElementById('boostBarWrap').style.display = 'flex';
+            document.getElementById('boostBar').style.width = (player.boostTimer / boostMax * 100) + '%';
+        } else {
+            document.getElementById('boostBarWrap').style.display = 'none';
+        }
+
+        document.getElementById('shieldIndicator').style.display = player.shield ? 'flex' : 'none';
+
+        const isBoosting = player.boostTimer > 0;
+        baseSpeed = 6.5 + Math.min(6, (currentSector - 1) * 0.7);
+        currentSpeed = isBoosting ? baseSpeed * 1.75 : baseSpeed;
+
+        distance += (currentSpeed * 0.08) * (1 + (combo - 1) * 0.15);
+        const intDist = Math.floor(distance);
+        document.getElementById('currentScore').innerText = intDist;
+
+        if (!boss && intDist >= nextBossDist) {
+            spawnBoss();
+        }
+
+        roadOffset = (roadOffset + currentSpeed) % 60;
+
+        for (let s of stars) {
+            s.y += s.speed * (isBoosting ? 3 : 1);
+            if (s.y > logicalHeight) {
+                s.y = -5;
+                s.x = Math.random() * logicalWidth;
+            }
+        }
+        for (let n of nebulas) {
+            n.y += 0.6;
+            if (n.y - n.radius > logicalHeight) {
+                n.y = -n.radius;
+                n.x = Math.random() * logicalWidth;
+            }
+        }
+
+        // Posizione e Virata 3D Giocatore
+        const targetX = lanes[currentLane];
+        player.x += (targetX - player.x) * 0.25;
+        player.y = logicalHeight - 135;
+        player.tilt *= 0.82;
+
+        if (empWaveRadius > 0) {
+            empWaveRadius += 28;
+            if (empWaveRadius > logicalHeight * 1.2) empWaveRadius = 0;
+        }
+
+        // Auto-Fuoco Personalizzato in base alla Navicella Sbloccata!
+        let baseInterval = Math.max(7, 19 - saveData.upgrades.blaster);
+        if (saveData.selectedShip === 1) baseInterval = Math.max(6, Math.floor(baseInterval * 0.75)); // Crimson Viper +25% fire rate
+
+        if (frameCount % baseInterval === 0) {
+            const dmg = saveData.selectedShip === 2 ? 2 : 1; // Solaris Prime Danno x2
+            if (saveData.selectedShip === 3) {
+                // Omega Wraith: Triplo Colpo a Ventaglio
+                bullets.push({ x: player.x - 16, y: player.y - 20, vx: -1.2, vy: -16, dmg: 1 });
+                bullets.push({ x: player.x, y: player.y - 26, vx: 0, vy: -16, dmg: 1 });
+                bullets.push({ x: player.x + 16, y: player.y - 20, vx: 1.2, vy: -16, dmg: 1 });
+            } else if (saveData.selectedShip === 4) {
+                // Celestial Apex: 4 Laser Divini
+                bullets.push({ x: player.x - 22, y: player.y - 16, vx: 0, vy: -17, dmg: 1.5 });
+                bullets.push({ x: player.x - 8, y: player.y - 24, vx: 0, vy: -17, dmg: 1.5 });
+                bullets.push({ x: player.x + 8, y: player.y - 24, vx: 0, vy: -17, dmg: 1.5 });
+                bullets.push({ x: player.x + 22, y: player.y - 16, vx: 0, vy: -17, dmg: 1.5 });
+            } else {
+                // Standard / Viper / Solaris
+                bullets.push({ x: player.x - 14, y: player.y - 22, vx: 0, vy: -16, dmg: dmg });
+                bullets.push({ x: player.x + 14, y: player.y - 22, vx: 0, vy: -16, dmg: dmg });
+            }
+            playSound('shoot');
+        }
+
+        // Aggiorna Proiettili
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            let b = bullets[i];
+            b.x += b.vx || 0;
+            b.y += b.vy;
+
+            if (boss && Math.abs(b.x - boss.x) < 56 && Math.abs(b.y - boss.y) < 42) {
+                boss.hp -= b.dmg;
+                boss.hitFlash = 3;
+                createExplosion(b.x, b.y, '#38bdf8', 3);
+                bullets.splice(i, 1);
+                continue;
+            }
+
+            let hitObs = false;
+            for (let j = obstacles.length - 1; j >= 0; j--) {
+                let obs = obstacles[j];
+                const obsX = lanes[obs.lane];
+                if (Math.abs(b.x - obsX) < 32 && Math.abs(b.y - obs.y) < 26) {
+                    hitObs = true;
+                    if (obs.type === 'drone' || obs.type === 'heavy') {
+                        obs.hp -= b.dmg;
+                        obs.hitFlash = 3;
+                        createExplosion(b.x, b.y, '#fb923c', 4);
+                        if (obs.hp <= 0) {
+                            playSound('break');
+                            createExplosion(obsX, obs.y, '#f43f5e', 20);
+                            const bonus = obs.type === 'heavy' ? 30 : 15;
+                            addFloatingText(`+${bonus}m`, obsX, obs.y, '#38bdf8');
+                            distance += bonus;
+                            empCharge = Math.min(100, empCharge + (obs.type === 'heavy' ? 22 : 14));
+                            updateEmpUI();
+                            advanceMission('drones', 1);
+                            items.push({ lane: obs.lane, y: obs.y, type: 'gem' });
+                            obstacles.splice(j, 1);
+                        }
+                    } else {
+                        createExplosion(b.x, b.y, '#94a3b8', 2);
+                    }
+                    break;
+                }
+            }
+
+            if (hitObs || b.y < -20) {
+                bullets.splice(i, 1);
+            }
+        }
+
+        // Logica Boss
+        if (boss) {
+            if (boss.hitFlash > 0) boss.hitFlash--;
+            const hpPct = Math.max(0, Math.ceil((boss.hp / boss.maxHp) * 100));
+            document.getElementById('bossHpText').innerText = hpPct + '%';
+            document.getElementById('bossBarFill').style.width = hpPct + '%';
+
+            if (boss.hp <= 0) {
+                playSound('emp');
+                createExplosion(boss.x, boss.y, '#fbbf24', 50);
+                shakeTimer = 24;
+                runGemsCount += 45;
+                saveData.gems += 45;
+                document.getElementById('hudGems').innerText = runGemsCount;
+                advanceMission('boss', 1);
+
+                boss = null;
+                document.getElementById('bossHud').style.display = 'none';
+
+                currentSector++;
+                nextBossDist = Math.floor(distance) + 550;
+                const newBiome = BIOMES[(currentSector - 1) % BIOMES.length];
+                document.getElementById('sectorText').innerText = `SETTORE ${currentSector}`;
+                document.getElementById('scoreBoxBorder').style.borderLeftColor = newBiome.color;
+                showBanner(`🏆 CORAZZATA DISTRUTTA! +45💎`, newBiome.color);
+            } else {
+                boss.timer++;
+                if (boss.state === 'ENTERING') {
+                    boss.y += (boss.targetY - boss.y) * 0.08;
+                    if (Math.abs(boss.y - boss.targetY) < 2) {
+                        boss.state = 'MOVING';
+                        boss.timer = 0;
+                    }
+                } else if (boss.state === 'MOVING') {
+                    boss.x += (lanes[boss.lane] - boss.x) * 0.12;
+                    if (boss.timer % 55 === 0) {
+                        boss.lane = Math.floor(Math.random() * 3);
+                    }
+                    if (boss.timer > 130) {
+                        boss.state = 'AIMING';
+                        boss.laserLane = currentLane;
+                        boss.lane = boss.laserLane;
+                        boss.timer = 0;
+                    }
+                } else if (boss.state === 'AIMING') {
+                    boss.x += (lanes[boss.laserLane] - boss.x) * 0.2;
+                    if (boss.timer > 55) {
+                        boss.state = 'FIRING';
+                        boss.timer = 0;
+                        playSound('break');
+                        shakeTimer = 10;
+                    }
+                } else if (boss.state === 'FIRING') {
+                    if (currentLane === boss.laserLane && !isBoosting) {
+                        if (player.shield) {
+                            player.shield = false;
+                            boss.state = 'MOVING';
+                            boss.timer = 0;
+                            addFloatingText("SCUDO INFRANTO!", player.x, player.y - 30, '#38bdf8');
+                        } else {
+                            playSound('crash');
+                            createExplosion(player.x, player.y, '#f43f5e', 35);
+                            triggerGameOver();
+                            return;
+                        }
+                    }
+                    if (boss.timer > 35) {
+                        boss.state = 'MOVING';
+                        boss.timer = 0;
+                    }
+                }
+            }
+        }
+
+        const spawnInterval = Math.max(30, Math.floor(66 - currentSpeed * 2.4));
+        if (frameCount % spawnInterval === 0) {
+            spawnWave();
+        }
+
+        // Aggiorna Ostacoli
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            let obs = obstacles[i];
+            if (obs.hitFlash > 0) obs.hitFlash--;
+            obs.y += currentSpeed;
+            const obsX = lanes[obs.lane];
+
+            const dx = Math.abs(player.x - obsX);
+            const dy = Math.abs(player.y - obs.y);
+
+            if (dx < 29 && dy < (obs.height / 2 + 22)) {
+                if (isBoosting) {
+                    playSound('break');
+                    createExplosion(obsX, obs.y, '#fb923c', 18);
+                    addFloatingText("SMASH +15m", obsX, obs.y, '#fb923c');
+                    distance += 15;
+                    obstacles.splice(i, 1);
+                    shakeTimer = 6;
+                    continue;
+                } else if (player.shield) {
+                    player.shield = false;
+                    playSound('break');
+                    createExplosion(obsX, obs.y, '#38bdf8', 22);
+                    addFloatingText("SCUDO INFRANTO!", player.x, player.y - 30, '#38bdf8');
+                    obstacles.splice(i, 1);
+                    shakeTimer = 10;
+                    continue;
+                } else {
+                    playSound('crash');
+                    createExplosion(player.x, player.y, '#f43f5e', 35);
+                    shakeTimer = 20;
+                    if (navigator.vibrate) navigator.vibrate(200);
+                    triggerGameOver();
+                    return;
+                }
+            }
+
+            if (!obs.nearMissed && obs.y > player.y + 18 && obs.y < player.y + 45) {
+                if (dx >= 29 && dx < 64) {
+                    obs.nearMissed = true;
+                    combo = Math.min(5, combo + 1);
+                    comboTimer = 260;
+                    const badge = document.getElementById('comboBadge');
+                    badge.style.display = 'inline-block';
+                    badge.innerText = 'x' + combo;
+                    addFloatingText(`SFIORATO! x${combo}`, player.x, player.y - 35, '#fbbf24');
+                    empCharge = Math.min(100, empCharge + 10);
+                    updateEmpUI();
+                }
+            }
+
+            if (obs.y > logicalHeight + 80) {
+                obstacles.splice(i, 1);
+            }
+        }
+
+        // Aggiorna Gemme e Power-Up
+        for (let i = items.length - 1; i >= 0; i--) {
+            let it = items[i];
+            it.y += currentSpeed;
+
+            if (it.currentX === undefined) it.currentX = lanes[it.lane];
+
+            if (it.type === 'gem' && player.magnetTimer > 0 && it.y > 60) {
+                const dxM = player.x - it.currentX;
+                const dyM = player.y - it.y;
+                if (Math.hypot(dxM, dyM) < 280) {
+                    it.currentX += dxM * 0.2;
+                    it.y += dyM * 0.2;
+                }
+            } else {
+                it.currentX = lanes[it.lane];
+            }
+
+            if (Math.hypot(player.x - it.currentX, player.y - it.y) < 34) {
+                if (it.type === 'gem') {
+                    runGemsCount++;
+                    saveData.gems++;
+                    document.getElementById('hudGems').innerText = runGemsCount;
+                    empCharge = Math.min(100, empCharge + 5);
+                    updateEmpUI();
+                    advanceMission('gems', 1);
+                    playSound('gem');
+                    addFloatingText("+1 💎", it.currentX, it.y, '#fbbf24');
+                } else if (it.type === 'shield') {
+                    player.shield = true;
+                    playSound('powerup');
+                    addFloatingText("SCUDO!", player.x, player.y - 25, '#38bdf8');
+                } else if (it.type === 'magnet') {
+                    player.magnetTimer = magnetMax;
+                    playSound('powerup');
+                    addFloatingText("MAGNETE!", player.x, player.y - 25, '#c084fc');
+                } else if (it.type === 'boost') {
+                    player.boostTimer = boostMax;
+                    playSound('powerup');
+                    addFloatingText("OVERDRIVE!", player.x, player.y - 25, '#fb923c');
+                }
+                items.splice(i, 1);
+                continue;
+            }
+
+            if (it.y > logicalHeight + 60) items.splice(i, 1);
+        }
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.alpha -= 0.035;
+            if (p.alpha <= 0) particles.splice(i, 1);
+        }
+
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            let ft = floatingTexts[i];
+            ft.y -= 1.5;
+            ft.alpha -= 0.03;
+            if (ft.alpha <= 0) floatingTexts.splice(i, 1);
+        }
+    }
+
+    // --- RENDERING SPRITE HD ---
+    function drawPlayerSprite(ctx, x, y, tilt, shipIdx, isBoosting, hasShield) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(tilt);
+        const bankScaleX = 1 - Math.abs(tilt) * 0.25;
+        ctx.scale(bankScaleX, 1);
+
+        const shipCfg = SHIPS[shipIdx] || SHIPS[0];
+
+        const flameLen = isBoosting ? 36 + Math.random() * 14 : 18 + Math.random() * 8;
+        const grad = ctx.createLinearGradient(0, 22, 0, 22 + flameLen);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.4, isBoosting ? '#fb923c' : shipCfg.engine);
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+
+        ctx.beginPath();
+        ctx.moveTo(-11, 24); ctx.lineTo(-7, 24 + flameLen); ctx.lineTo(-3, 24);
+        ctx.moveTo(3, 24); ctx.lineTo(7, 24 + flameLen); ctx.lineTo(11, 24);
+        ctx.fill();
+
+        const spriteImg = SPRITES.ships[shipIdx] || SPRITES.ships[0];
+        if (spriteImg.complete) {
+            ctx.drawImage(spriteImg, -34, -36, 68, 74);
+        }
+
+        ctx.restore();
+
+        if (hasShield || isBoosting) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.strokeStyle = isBoosting ? '#fb923c' : '#38bdf8';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(0, 0, 38, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = isBoosting ? 'rgba(251, 146, 60, 0.14)' : 'rgba(56, 189, 248, 0.14)';
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    function drawObstacleSprite(ctx, x, y, obs) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        if (obs.type === 'barrier') {
+            const halfW = obs.width / 2;
+            ctx.fillStyle = 'rgba(244, 63, 94, 0.35)';
+            ctx.fillRect(-halfW + 10, -9, obs.width - 20, 18);
+            ctx.fillStyle = '#f43f5e';
+            ctx.fillRect(-halfW + 10, -4, obs.width - 20, 8);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(-halfW + 10, -1.5, obs.width - 20, 3);
+
+            if (SPRITES.pylon.complete) {
+                ctx.drawImage(SPRITES.pylon, -halfW - 2, -16, 20, 32);
+                ctx.drawImage(SPRITES.pylon, halfW - 18, -16, 20, 32);
+            }
+        } else {
+            const img = obs.type === 'heavy' ? SPRITES.enemyHeavy : SPRITES.enemyDrone;
+            const size = obs.type === 'heavy' ? 64 : 58;
+
+            if (img.complete) {
+                ctx.drawImage(img, -size / 2, -size / 2, size, size);
+            }
+
+            if (obs.hitFlash > 0) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+                ctx.beginPath();
+                ctx.arc(0, 0, size * 0.42, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            if (obs.hp < obs.maxHp) {
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+                ctx.fillRect(-20, -size / 2 - 8, 40, 5);
+                ctx.fillStyle = obs.type === 'heavy' ? '#f59e0b' : '#f43f5e';
+                ctx.fillRect(-20, -size / 2 - 8, 40 * (obs.hp / obs.maxHp), 5);
+            }
+        }
+
+        ctx.restore();
+    }
+
+    function drawBossSprite(ctx, b, lanes) {
+        if (b.state === 'AIMING') {
+            const lx = lanes[b.laserLane];
+            ctx.fillStyle = 'rgba(244, 63, 94, 0.18)';
+            ctx.fillRect(lx - 30, b.y, 60, logicalHeight);
+            ctx.strokeStyle = '#f43f5e';
+            ctx.setLineDash([10, 8]);
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(lx, b.y + 20);
+            ctx.lineTo(lx, logicalHeight);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        } else if (b.state === 'FIRING') {
+            const lx = lanes[b.laserLane];
+            ctx.fillStyle = 'rgba(244, 63, 94, 0.45)';
+            ctx.fillRect(lx - 34, b.y + 20, 68, logicalHeight);
+            ctx.fillStyle = '#f43f5e';
+            ctx.fillRect(lx - 16, b.y + 20, 32, logicalHeight);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(lx - 6, b.y + 20, 12, logicalHeight);
+        }
+
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        if (SPRITES.boss.complete) {
+            ctx.drawImage(SPRITES.boss, -85, -54, 170, 108);
+        }
+        if (b.hitFlash > 0) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.beginPath();
+            ctx.arc(0, 6, 48, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    function drawItemSprite(ctx, x, y, item) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        if (item.type === 'gem') {
+            if (SPRITES.gem.complete) {
+                ctx.drawImage(SPRITES.gem, -14, -14, 28, 28);
+            }
+        } else {
+            let color = '#38bdf8';
+            let symbol = '🛡️';
+            if (item.type === 'magnet') { color = '#c084fc'; symbol = '🧲'; }
+            if (item.type === 'boost') { color = '#fb923c'; symbol = '⚡'; }
+
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, 17, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.font = '15px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbol, 0, 1);
+        }
+
+        ctx.restore();
+    }
+
+    function draw() {
+        ctx.save();
+
+        if (shakeTimer > 0) {
+            shakeTimer--;
+            ctx.translate((Math.random() - 0.5) * 9, (Math.random() - 0.5) * 9);
+        }
+
+        const biome = BIOMES[(currentSector - 1) % BIOMES.length];
+
+        ctx.fillStyle = biome.bg;
+        ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+
+        for (let n of nebulas) {
+            const grad = ctx.createRadialGradient(n.x, n.y, 10, n.x, n.y, n.radius);
+            grad.addColorStop(0, biome.nebula);
+            grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.fillStyle = '#64748b';
+        for (let s of stars) {
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        const roadMargin = 32;
+        const roadWidth = logicalWidth - roadMargin * 2;
+        const laneW = roadWidth / 3;
+
+        ctx.fillStyle = biome.track;
+        ctx.fillRect(roadMargin, 0, roadWidth, logicalHeight);
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+        ctx.lineWidth = 1.5;
+        for (let y = -60 + roadOffset; y < logicalHeight; y += 60) {
+            ctx.beginPath();
+            ctx.moveTo(roadMargin, y);
+            ctx.lineTo(logicalWidth - roadMargin, y);
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = biome.color;
+        for (let y = -60 + roadOffset; y < logicalHeight; y += 60) {
+            ctx.globalAlpha = 0.28;
+            ctx.fillRect(6, y, 18, 28);
+            ctx.fillRect(logicalWidth - 24, y, 18, 28);
+        }
+        ctx.globalAlpha = 1;
+
+        ctx.strokeStyle = player.boostTimer > 0 ? '#fb923c' : biome.color;
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(roadMargin, 0); ctx.lineTo(roadMargin, logicalHeight);
+        ctx.moveTo(logicalWidth - roadMargin, 0); ctx.lineTo(logicalWidth - roadMargin, logicalHeight);
+        ctx.stroke();
+
+        const lanes = getLanes();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.16)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([16, 24]);
+        ctx.lineDashOffset = -roadOffset;
+        ctx.beginPath();
+        ctx.moveTo(roadMargin + laneW, 0); ctx.lineTo(roadMargin + laneW, logicalHeight);
+        ctx.moveTo(roadMargin + laneW * 2, 0); ctx.lineTo(roadMargin + laneW * 2, logicalHeight);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        for (let b of bullets) {
+            ctx.fillStyle = saveData.selectedShip === 2 ? '#fbbf24' : biome.color;
+            ctx.fillRect(b.x - 2.5, b.y - 10, 5, 18);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(b.x - 1, b.y - 8, 2, 12);
+        }
+
+        for (let it of items) {
+            const drawX = it.currentX !== undefined ? it.currentX : lanes[it.lane];
+            drawItemSprite(ctx, drawX, it.y, it);
+        }
+
+        for (let obs of obstacles) {
+            drawObstacleSprite(ctx, lanes[obs.lane], obs.y, obs);
+        }
+
+        if (boss) {
+            drawBossSprite(ctx, boss, lanes);
+        }
+
+        if (gameState === 'PLAYING' || gameState === 'PAUSED') {
+            drawPlayerSprite(ctx, player.x, player.y, player.tilt, saveData.selectedShip, player.boostTimer > 0, player.shield);
+        }
+
+        if (empWaveRadius > 0) {
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, empWaveRadius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        for (let p of particles) {
+            ctx.globalAlpha = p.alpha;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        for (let ft of floatingTexts) {
+            ctx.globalAlpha = ft.alpha;
+            ctx.font = '900 13px sans-serif';
+            ctx.fillStyle = ft.color;
+            ctx.textAlign = 'center';
+            ctx.fillText(ft.text, ft.x, ft.y);
+        }
+        ctx.globalAlpha = 1;
+
+        ctx.restore();
+    }
+
+    // --- GESTIONE MENU E HANGAR ---
+    function updateMenuUI() {
+        document.getElementById('menuBestScore').innerText = saveData.highScore.toLocaleString('it-IT') + 'm';
+        document.getElementById('menuTotalGems').innerText = '💎 ' + saveData.gems.toLocaleString('it-IT');
+        document.getElementById('shopGems').innerText = saveData.gems.toLocaleString('it-IT');
+
+        const mCont = document.getElementById('missionsContainer');
+        mCont.innerHTML = '';
+        saveData.missions.forEach(m => {
+            const row = document.createElement('div');
+            row.className = 'mission-row';
+            row.innerHTML = `
+                <span>${m.desc} (${m.progress}/${m.target})</span>
+                <span class="mission-reward">+${m.reward} 💎</span>
+            `;
+            mCont.appendChild(row);
+        });
+
+        renderShop();
+    }
+
+    function renderShop() {
+        const grid = document.getElementById('shopGrid');
+        grid.innerHTML = '';
+
+        SHIPS.forEach((ship) => {
+            const isOwned = saveData.unlockedShips.includes(ship.id);
+            const isSelected = saveData.selectedShip === ship.id;
+
+            const card = document.createElement('div');
+            card.className = 'ship-card' + (isSelected ? ' selected' : '') + (ship.fullWidth ? ' full-width' : '');
+
+            let statusHTML = '';
+            if (isSelected) statusHTML = `<div class="ship-status status-equipped">Equipaggiata</div>`;
+            else if (isOwned) statusHTML = `<div class="ship-status status-owned">Seleziona</div>`;
+            else statusHTML = `<div class="ship-status status-locked">💎 ${ship.price.toLocaleString('it-IT')}</div>`;
+
+            card.innerHTML = `
+                <img src="${SPRITES.ships[ship.id].src}" alt="${ship.name}">
+                <div class="ship-name">${ship.name}</div>
+                <div class="ship-perk">${ship.perk}</div>
+                ${statusHTML}
+            `;
+
+            card.addEventListener('click', () => {
+                initAudio();
+                if (isOwned) {
+                    saveData.selectedShip = ship.id;
+                    playSound('move');
+                    saveProgress();
+                } else if (saveData.gems >= ship.price) {
+                    saveData.gems -= ship.price;
+                    saveData.unlockedShips.push(ship.id);
+                    saveData.selectedShip = ship.id;
+                    playSound('powerup');
+                    showToast(`🚀 ${ship.name} Sbloccata!`);
+                    saveProgress();
+                } else {
+                    playSound('break');
+                    showToast(`Ti servono ${ship.price.toLocaleString('it-IT')} 💎!`);
+                }
+            });
+            grid.appendChild(card);
+        });
+
+        const upgList = document.getElementById('upgradesList');
+        upgList.innerHTML = '';
+        const upgDefs = [
+            { key: 'blaster', title: '🔫 Cannoni Plasma', desc: 'Aumenta velocità di fuoco' },
+            { key: 'magnet', title: '🧲 Nucleo Magnetico', desc: 'Aumenta durata Magnete' },
+            { key: 'boost', title: '⚡ Reattore Overdrive', desc: 'Aumenta durata Turbo' }
+        ];
+
+        upgDefs.forEach(u => {
+            const lvl = saveData.upgrades[u.key] || 1;
+            const cost = lvl * 250; // Costo alto fino a 2.500 gemme a livello!
+            const isMax = lvl >= 10;
+
+            const item = document.createElement('div');
+            item.className = 'upgrade-item';
+            item.innerHTML = `
+                <div class="upg-info">
+                    <strong>${u.title} (Lv.${lvl}/10)</strong>
+                    <small>${u.desc}</small>
+                </div>
+                <button class="upg-btn" ${isMax ? 'disabled' : ''}>
+                    ${isMax ? 'MAX' : '💎 ' + cost.toLocaleString('it-IT')}
+                </button>
+            `;
+
+            item.querySelector('button').addEventListener('click', () => {
+                initAudio();
+                if (!isMax && saveData.gems >= cost) {
+                    saveData.gems -= cost;
+                    saveData.upgrades[u.key]++;
+                    playSound('powerup');
+                    saveProgress();
+                } else if (!isMax) {
+                    playSound('break');
+                    showToast(`Ti servono ${cost.toLocaleString('it-IT')} 💎!`);
+                }
+            });
+
+            upgList.appendChild(item);
+        });
+    }
+
+    function startGame() {
+        initAudio();
+        distance = 0;
+        nextBossDist = 450;
+        runGemsCount = 0;
+        currentSector = 1;
+        frameCount = 0;
+        combo = 1;
+        comboTimer = 0;
+        empCharge = 50;
+        empWaveRadius = 0;
+        updateEmpUI();
+
+        boss = null;
+        bullets = [];
+        obstacles = [];
+        items = [];
+        particles = [];
+        floatingTexts = [];
+
+        const lanes = getLanes();
+        currentLane = 1;
+        player.x = lanes[1];
+        player.y = logicalHeight - 135;
+        player.tilt = 0;
+        // La 5ª navicella (Celestial Apex) parte sempre con uno Scudo attivo!
+        player.shield = (saveData.selectedShip === 4);
+        player.magnetTimer = 0;
+        player.boostTimer = 0;
+
+        document.getElementById('hudGems').innerText = '0';
+        document.getElementById('sectorText').innerText = 'SETTORE 1';
+        document.getElementById('comboBadge').style.display = 'none';
+        document.getElementById('bossHud').style.display = 'none';
+        document.getElementById('scoreBoxBorder').style.borderLeftColor = BIOMES[0].color;
+        document.getElementById('hudLayer').style.display = 'flex';
+
+        document.getElementById('startScreen').classList.add('hidden');
+        document.getElementById('gameOverScreen').classList.add('hidden');
+        document.getElementById('pauseScreen').classList.add('hidden');
+        document.getElementById('shopScreen').classList.add('hidden');
+
+        gameState = 'PLAYING';
+        showBanner('SETTORE 1: CYBER GRID', BIOMES[0].color);
+    }
+
+    function triggerGameOver() {
+        gameState = 'GAMEOVER';
+        gameOverTimestamp = performance.now(); // Registra l'istante del Game Over
+        document.getElementById('hudLayer').style.display = 'none';
+
+        const finalDist = Math.floor(distance);
+        const badge = document.getElementById('newRecordBadge');
+
+        if (finalDist > saveData.highScore) {
+            saveData.highScore = finalDist;
+            badge.innerText = '🏆 NUOVO RECORD ASSOLUTO!';
+            badge.style.color = '#fbbf24';
+        } else {
+            badge.innerText = 'Corsa Terminata';
+            badge.style.color = '#94a3b8';
+        }
+
+        saveProgress();
+
+        document.getElementById('finalScore').innerText = finalDist.toLocaleString('it-IT') + 'm';
+        document.getElementById('runGems').innerText = '+' + runGemsCount + ' 💎';
+        document.getElementById('gameOverScreen').classList.remove('hidden');
+    }
+
+    // Controllo di sicurezza anti-tocco involontario appena si muore (600ms)
+    function canClickGameOver() {
+        return (performance.now() - gameOverTimestamp) > 600;
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('restartBtn').addEventListener('click', () => {
+        if (!canClickGameOver()) return;
+        startGame();
+    });
+
+    document.getElementById('openShopBtn').addEventListener('click', () => {
+        updateMenuUI();
+        document.getElementById('startScreen').classList.add('hidden');
+        document.getElementById('shopScreen').classList.remove('hidden');
+    });
+
+    document.getElementById('gameOverShopBtn').addEventListener('click', () => {
+        if (!canClickGameOver()) return;
+        updateMenuUI();
+        document.getElementById('gameOverScreen').classList.add('hidden');
+        document.getElementById('shopScreen').classList.remove('hidden');
+    });
+
+    document.getElementById('closeShopBtn').addEventListener('click', () => {
+        document.getElementById('shopScreen').classList.add('hidden');
+        document.getElementById('startScreen').classList.remove('hidden');
+    });
+
+    document.getElementById('pauseBtn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (gameState === 'PLAYING') {
+            gameState = 'PAUSED';
+            document.getElementById('pauseScreen').classList.remove('hidden');
+        }
+    });
+
+    document.getElementById('resumeBtn').addEventListener('click', () => {
+        if (gameState === 'PAUSED') {
+            document.getElementById('pauseScreen').classList.add('hidden');
+            gameState = 'PLAYING';
+        }
+    });
+
+    document.getElementById('quitBtn').addEventListener('click', () => {
+        gameState = 'MENU';
+        document.getElementById('hudLayer').style.display = 'none';
+        document.getElementById('pauseScreen').classList.add('hidden');
+        saveProgress();
+        document.getElementById('startScreen').classList.remove('hidden');
+    });
+
+    // Condivisione pulita senza URL locale e senza alert() del browser!
+    document.getElementById('shareBtn').addEventListener('click', () => {
+        if (!canClickGameOver()) return;
+        const finalDist = Math.floor(distance);
+        const text = `Ho raggiunto ${finalDist}m (Settore ${currentSector}) su Cyber Rush: Overdrive! Riesci a battermi? 🚀`;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('🏆 Record copiato negli appunti!');
+            }).catch(() => {
+                showToast('🏆 Nuovo Record: ' + finalDist + 'm!');
+            });
+        } else {
+            showToast('🏆 Nuovo Record: ' + finalDist + 'm!');
+        }
+    });
+
+    updateMenuUI();
+
+    function loop() {
+        update();
+        draw();
+        requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+</script>
+</body>
+</html>
