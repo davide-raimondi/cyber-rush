@@ -1,10 +1,16 @@
 # 🚀 Cyber Rush: Overdrive HD
 
+[![Gioca Ora](https://img.shields.io/badge/PLAY_NOW-ONLINE_DEMO-00f3ff?style=for-the-badge&logo=googlechrome&logoColor=black)](https://davide23567.github.io/cyber-rush/)
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-Mobile%20%7C%20Web-blue?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+
+> **Provalo subito da smartphone o PC senza installare nulla:**  
+> 👉 **[GIOCA A CYBER RUSH ORA](https://davide23567.github.io/cyber-rush/)** 👈
+
+---
 
 **Cyber Rush: Overdrive HD** è un action-runner spaziale frenetico a 3 corsie sviluppato interamente in un **singolo file** (`index.html`), senza asset grafici o sonori esterni. Include combattimento automatico, battaglie contro boss titanici, generazione procedurale di settori e un hangar con navicelle e potenziamenti persistenti.
 
@@ -61,4 +67,3 @@ Non servono build tool, Node.js o pacchetti esterni:
 
 ```bash
 git clone [https://github.com/davide23567/cyber-rush.git](https://github.com/davide23567/cyber-rush.git)
-cd cyber-rush
